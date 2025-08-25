@@ -1,0 +1,40 @@
+name: Exe Release build
+
+on:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          repository: czqu/silk-player
+          ref: ${{ github.ref }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          cache: true
+          channel: stable
+          flutter-version-file: pubspec.yaml
+
+      - run: flutter build windows --release
+      - name: archive
+        run: |
+          $sourcePath = Join-Path -Path (Get-Location) -ChildPath 'build/windows/x64/runner/Release'
+          $zipFileName = 'Silk_Player_windows_x64.zip'
+          $destinationPath = Join-Path -Path (Get-Location) -ChildPath $zipFileName
+          Compress-Archive -Path $sourcePath\* -DestinationPath $destinationPath -Force
+        shell: pwsh
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
+        with:
+          files: "Silk_Player_*.zip"
+          prerelease: false
+          token: ${{ secrets.GH_TOKEN }}
+          body_path: CHANGELOG.md
